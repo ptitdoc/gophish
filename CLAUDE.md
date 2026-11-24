@@ -34,7 +34,37 @@ places cannot be rebased any more.
 | 5cebc48 | 2025-01-14 | support custom throttling of email | Adds a send-rate selector (`#select_send_rate`) and a custom-rate modal (`#selectCustomRateModal`) to the campaign form (`templates/campaigns.html`). |
 | 1cc1c3f | 2025-01-14 | custom throttling for email sent time | JS for the selector (`static/js/src/app/campaigns.js`): computes the upstream "send emails by" date from the rate and the group sizes, or the rate from that date. |
 | 2aff248 | 2025-01-14 | hide hostname in smtp client | The SMTP client announces `localhost` in EHLO instead of the machine hostname (`models/smtp.go`). |
-| -- | -- | QR code template functions | Templates can embed a QR code of the recipient link (`doc/FEATURE-qrcode.md`); `go.mod` replaces gomail with `../gomail`. |
+| 68c6ef6 | 2026-11-24 | Add qrcode and base64 template functions | Templates can embed a QR code of the recipient link (`doc/FEATURE-qrcode.md`); `go.mod` replaces gomail with `../gomail`. |
+
+## Build
+What to rebuild depends on what changed:
+
+| Changed | Action |
+|---|---|
+| Go code (`*.go`, `go.mod`) | `go build` |
+| `static/js/src/`, `static/css/` | JS build, then deploy `static/` |
+| `templates/*.html` | nothing to build: gophish reads them from disk on every page (`controllers/route.go`, `ParseFiles`); deploy the file |
+
+**Go binary**, from the repository root:
+`go build -o gophish . 2>&1 | tee /tmp/gophish-build.log`.
+- `go.mod` replaces gomail with `../gomail`: the gomail copy must sit next to the gophish
+  checkout, or the build fails on `reading ../gomail/go.mod`.
+- `github.com/mattn/go-sqlite3` is compiled with cgo, so gcc must be installed. Its
+  `-Wreturn-local-addr` warning in `sqlite3-binding.c` is upstream's and harmless.
+
+**JS build** (`static/js/dist/`, `static/css/dist/`), from the repository root:
+`npm install 2>&1 | tee /tmp/gophish-npm.log && npx gulp 2>&1 | tee /tmp/gophish-gulp.log`.
+- `npx gulp scripts` rebuilds only `static/js/dist/app/*.min.js`; `npx gulp` also
+  rebuilds `vendor.min.js` and the CSS (`gulpfile.js`).
+- `gulp` and `gulp-cli` are devDependencies, so `npx` runs the local copy; no global
+  install is needed (upstream's `Dockerfile` installs them globally).
+- On Debian and Ubuntu, the `yarn` command from the `cmdtest` package is an unrelated test
+  runner (`ERROR: [Errno 2] No such file or directory: 'install'`). Debian's real Yarn is
+  `yarnpkg`. `npm install` ignores `yarn.lock`, so tool versions may differ from a Yarn
+  build.
+- The output is not committed (see "Minified JS is not committed" below).
+
+**Tests**: no Makefile; `go test ./models/ > /tmp/gophish-test.txt 2>&1`.
 
 ## Conventions and known debts
 - **Throttling is front-end only.** The rate is never sent to the API: the JS turns it into
@@ -45,8 +75,8 @@ places cannot be rebased any more.
   commits only `static/js/src/`. Reasoning: a generated file in git has to be regenerated
   and re-committed at every source change, and the patch series stays limited to source.
   Consequence: the committed `*.min.js` are upstream's, without the fork's JS changes (1cc1c3f
-  has no `campaigns.min.js` counterpart). Rebuild them with upstream's gulp build before
-  deploying; the working tree held a rebuilt set on 2026-11-23.
+  has no `campaigns.min.js` counterpart). Rebuild them before deploying (see "Build"); the
+  working tree held a rebuilt set on 2026-11-23.
 - **The gomail replacement is a sibling directory.** `go.mod` replaces
   `github.com/gophish/gomail` with `../gomail`, resolved from the repository root, so the
   gomail copy with XOAUTH2 support sits next to the gophish checkout. That copy is not in
@@ -68,3 +98,4 @@ places cannot be rebased any more.
 | Recipient identifier | `RecipientParameter` (`token`, upstream `rid`) | le paramètre d'URL qui identifie la cible (FR) / the URL parameter that identifies the target (EN) |
 | QR code (ISO/IEC 18004) | template function `qrcode`, `templateQRCode` | l'image carrée que le téléphone scanne pour ouvrir le lien (FR) / the square image a phone scans to open the link (EN) |
 | Data URI (RFC 2397) | `data:image/png;base64,...` in an `<img src>` | l'image écrite directement dans le mail, sans fichier joint ni serveur (FR) / the image written inside the mail itself, with no attachment and no server (EN) |
+| Inline body part referenced by a Content-ID URL (`cid:`, RFC 2392) | template function `attachment`, collector `templateAttachments`, `embedTemplateAttachments` | une pièce jointe générée pour chaque destinataire et affichée dans le corps du mail (FR) / a file generated for each recipient, attached and shown inside the mail body (EN) |

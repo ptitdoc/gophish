@@ -236,15 +236,16 @@ func (m *MailLog) Generate(msg *gomail.Message) error {
 	}
 
 	msg.SetHeader("To", r.FormatAddress())
+	ta := newTemplateAttachments()
 	if c.Template.Text != "" {
-		text, err := ExecuteTemplate(c.Template.Text, ptx)
+		text, err := executeMailTemplate(c.Template.Text, ptx, ta)
 		if err != nil {
 			log.Warn(err)
 		}
 		msg.SetBody("text/plain", text)
 	}
 	if c.Template.HTML != "" {
-		html, err := ExecuteTemplate(c.Template.HTML, ptx)
+		html, err := executeMailTemplate(c.Template.HTML, ptx, ta)
 		if err != nil {
 			log.Warn(err)
 		}
@@ -258,6 +259,7 @@ func (m *MailLog) Generate(msg *gomail.Message) error {
 	for _, a := range c.Template.Attachments {
 		addAttachment(msg, a, ptx)
 	}
+	embedTemplateAttachments(msg, ta)
 
 	return nil
 }
@@ -358,5 +360,19 @@ func addAttachment(msg *gomail.Message, a Attachment, ptx PhishingTemplateContex
 		msg.Embed(a.Name, copyFunc)
 	} else {
 		msg.Attach(a.Name, copyFunc)
+	}
+}
+
+// embedTemplateAttachments adds to msg, as inline parts, the files the mail
+// bodies attached with the attachment template function. gomail sets each
+// part's Content-ID to <name>, which the bodies reference as cid:<name>
+// (tracker:dev:2611-003).
+func embedTemplateAttachments(msg *gomail.Message, ta *templateAttachments) {
+	for _, name := range ta.names {
+		content := ta.files[name]
+		msg.Embed(name, gomail.SetCopyFunc(func(w io.Writer) error {
+			_, err := w.Write(content)
+			return err
+		}))
 	}
 }

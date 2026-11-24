@@ -24,8 +24,9 @@ const (
 // a data URI: <img src="data:image/png;base64,{{.URL | qrcode | base64}}">
 // (tracker:dev:2611-002).
 var templateFuncs = template.FuncMap{
-	"qrcode": templateQRCode,
-	"base64": templateBase64,
+	"qrcode":     templateQRCode,
+	"base64":     templateBase64,
+	"attachment": templateAttachment, // mail bodies override it, see executeMailTemplate
 }
 
 // templateQRCode returns the PNG image of a QR code that encodes content.
@@ -112,13 +113,70 @@ func NewPhishingTemplateContext(ctx TemplateContext, r BaseRecipient, rid string
 // ExecuteTemplate creates a templated string based on the provided
 // template body and data.
 func ExecuteTemplate(text string, data interface{}) (string, error) {
+	return executeTemplateFuncs(text, data, nil)
+}
+
+// executeTemplateFuncs renders text with templateFuncs, overridden by
+// extra when it is not nil.
+func executeTemplateFuncs(text string, data interface{}, extra template.FuncMap) (string, error) {
 	buff := bytes.Buffer{}
-	tmpl, err := template.New("template").Funcs(templateFuncs).Parse(text)
+	tmpl, err := template.New("template").Funcs(templateFuncs).Funcs(extra).Parse(text)
 	if err != nil {
 		return buff.String(), err
 	}
 	err = tmpl.Execute(&buff, data)
 	return buff.String(), err
+}
+
+// templateAttachments collects the files a mail template adds with the
+// attachment function, so the mail construction embeds them as inline parts
+// (tracker:dev:2611-003). Usage, a QR code shown through its Content-ID:
+// <img src="{{.URL | qrcode | attachment "invitation.png"}}">
+// Reasoning: a template function cannot reach the mail being built, so the
+// mail construction hands each render this collector. One collector per mail:
+// its text and HTML bodies render separately and may attach the same file.
+type templateAttachments struct {
+	names []string // insertion order, so parts come out in template order
+	files map[string][]byte
+}
+
+func newTemplateAttachments() *templateAttachments {
+	return &templateAttachments{files: map[string][]byte{}}
+}
+
+// add records content under name and returns the cid: reference to it. The
+// same name with the same content is recorded once; with another content it
+// is an error, since one Content-ID can only show one file.
+func (ta *templateAttachments) add(name string, content []byte) (string, error) {
+	ref, err := templateAttachment(name, content)
+	if err != nil {
+		return "", err
+	}
+	if prev, ok := ta.files[name]; ok {
+		if !bytes.Equal(prev, content) {
+			return "", fmt.Errorf("attachment: %q already holds another content", name)
+		}
+		return ref, nil
+	}
+	ta.names = append(ta.names, name)
+	ta.files[name] = content
+	return ref, nil
+}
+
+// templateAttachment is the attachment function outside a mail (landing
+// pages, subject, headers, template validation): it returns the cid:
+// reference and attaches nothing, so templates using it still validate.
+func templateAttachment(name string, content []byte) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("attachment: empty file name")
+	}
+	return "cid:" + name, nil
+}
+
+// executeMailTemplate renders a mail body like ExecuteTemplate, with the
+// attachment function recording its files in ta.
+func executeMailTemplate(text string, data interface{}, ta *templateAttachments) (string, error) {
+	return executeTemplateFuncs(text, data, template.FuncMap{"attachment": ta.add})
 }
 
 // ValidationContext is used for validating templates and pages

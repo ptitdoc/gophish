@@ -150,15 +150,16 @@ func (s *EmailRequest) Generate(msg *gomail.Message) error {
 	}
 
 	msg.SetHeader("To", s.FormatAddress())
+	ta := newTemplateAttachments()
 	if s.Template.Text != "" {
-		text, err := ExecuteTemplate(s.Template.Text, ptx)
+		text, err := executeMailTemplate(s.Template.Text, ptx, ta)
 		if err != nil {
 			log.Error(err)
 		}
 		msg.SetBody("text/plain", text)
 	}
 	if s.Template.HTML != "" {
-		html, err := ExecuteTemplate(s.Template.HTML, ptx)
+		html, err := executeMailTemplate(s.Template.HTML, ptx, ta)
 		if err != nil {
 			log.Error(err)
 		}
@@ -173,6 +174,7 @@ func (s *EmailRequest) Generate(msg *gomail.Message) error {
 	for _, a := range s.Template.Attachments {
 		addAttachment(msg, a, ptx)
 	}
+	embedTemplateAttachments(msg, ta)
 
 	return nil
 }

@@ -77,14 +77,16 @@
                         <textarea id="html_editor"></textarea>
                     </div>
                 </div>
-                <!-- Template variable help (tracker:dev:2611-002). Braces are HTML
-                     entities: this page is itself rendered by html/template. -->
+                <!-- Template variable help (tracker:dev:2611-002, tracker:dev:2611-003).
+                     Braces are HTML entities: this page is itself rendered by html/template. -->
                 <div class="help-block">
                     Template variables:<br>
                     <code>&#123;&#123;.URL&#125;&#125;</code> recipient link<br>
                     <code>&#123;&#123;.URL | urlquery&#125;&#125;</code> link encoded as a URL parameter (external QR code service)<br>
                     <code>&#123;&#123;.URL | qrcode | base64&#125;&#125;</code> QR code of the link, PNG in base64<br>
-                    <code>&lt;img src="data:image/png;base64,&#123;&#123;.URL | qrcode | base64&#125;&#125;"&gt;</code> QR code embedded in the mail
+                    <code>&lt;img src="data:image/png;base64,&#123;&#123;.URL | qrcode | base64&#125;&#125;"&gt;</code> QR code embedded in the mail<br>
+                    <code>&lt;img src="&#123;&#123;.URL | qrcode | attachment "invitation.png"&#125;&#125;"&gt;</code> QR code attached to the mail as invitation.png and shown inline<br>
+                    Attachments: the variables are also replaced, for each recipient, inside .docx, .docm, .pptx, .xlsx, .xlsm, .txt, .html and .ics files. Other files are sent unchanged.
                 </div>
                 <div class="checkbox checkbox-primary">
                     <input id="use_tracker_checkbox" type="checkbox" checked>

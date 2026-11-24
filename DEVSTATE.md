@@ -15,7 +15,7 @@ Development work on the gophish fork: new patches of the series (fingerprint rem
 
 ## Log
 
-## OPEN () [] -- tracker:dev:2611-001 -- 2026-11-24 -- Recipient parameter name set in config.json; fix TestNewTemplateContext
+## NEXT () [] -- tracker:dev:2611-001 -- 2026-11-24 -- Recipient parameter name set in config.json; fix TestNewTemplateContext
 Context: daa71e3 "change rid to token" hard-codes the recipient URL parameter as `token` in `models/campaign.go` (`RecipientParameter`). `models/template_context_test.go` (`TestNewTemplateContext`) still expects `?rid=` in `URL` and `TrackingURL`, so it most likely fails since daa71e3 (read, not run, 2026-11-24).
 
 Goal: the parameter name comes from the configuration, so each assessment picks its own name without a rebuild.
@@ -34,7 +34,7 @@ Acceptance criteria:
 - `go test ./models/` green, `TestNewTemplateContext` included.
 - With `recipient_parameter` set to another name, a test mail carries `?<name>=` and a click on it is recorded.
 
-## NEXT () [] -- tracker:dev:2611-002 -- 2026-11-24 -- QR code template functions qrcode and base64
+## DONE (commit:68c6ef6) [H] -- tracker:dev:2611-002 -- 2026-11-24 -- QR code template functions qrcode and base64
 Context: assessments need a QR code in phishing mails that carries the recipient URL. A remote QR service works today (`<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={{.URL | urlquery}}">`, checked 2026-11-24), but it sends every recipient token to a third party and is a remote image that clients block or proxy.
 
 Goal (variant 1): gophish generates the QR code itself and the template embeds it as a data URI:
@@ -55,3 +55,21 @@ Acceptance criteria:
 - `{{.URL | qrcode | base64}}` renders a base64 string that decodes to a PNG whose QR content equals `.URL`, checked with a decoder that shares no code with the generator (`zbarimg` or a phone scan).
 - `ValidateTemplate` accepts a template using both functions.
 - `go test ./models/` green, apart from failures already present before the change (see tracker:dev:2611-001).
+Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=turn 41  ctx 100k  floor 50k (turn 1)  cumulated 3.1M tok  est. $2.16  model claude-opus-5-5 reason=Session cleared after commit 68c6ef6, before the live acceptance check. status=Implemented and committed (68c6ef6); entry stays NEXT until the live scan check passes.
+
+## NEXT (tracker:dev:2611-002) [H] -- tracker:dev:2611-003 -- 2026-11-24 -- QR code as an inline cid: image attachment (variant 2)
+Context: tracker:dev:2611-002 (commit 68c6ef6) added the template functions `qrcode` and `base64`, so a template embeds the QR code of the recipient link as a data URI: `<img src="data:image/png;base64,{{.URL | qrcode | base64}}">`. Mail clients display an inline `cid:` attachment more reliably than a data URI. This item was marked out of scope of 2611-002 ("variant 2"); the reference points to that origin.
+
+Goal: the QR code of `.URL` reaches the recipient as an inline image attachment, referenced from the HTML as `<img src="cid:qrcode.png">`.
+
+Default if nobody decides: an attached image named `qrcode.png` is replaced per recipient by the QR code of `.URL` in `Attachment.ApplyTemplate`, and the HTML uses `<img src="cid:qrcode.png">`. Reasoning: it reuses the existing inline embedding (`msg.Embed` in models/maillog.go) and needs no UI change. Not checked against the code yet (2026-11-24): read `Attachment.ApplyTemplate` and the `msg.Embed` path before planning.
+
+Constraints: reuse `templateFuncs` / the go-qrcode generator from 68c6ef6 (256 px, medium error correction); one patch of the series, small enough to replay on a newer upstream.
+
+Acceptance criteria (draft, to confirm when planning):
+- A campaign mail carries an inline `qrcode.png` part whose QR content equals the recipient `.URL`, checked with a decoder that shares no code with the generator (`zbarimg` or a phone scan).
+- Each recipient gets their own QR code (two recipients, two different tokens).
+- Tests `TestFeat_<id>_*` in `models/`; `go test ./models/` green apart from pre-existing failures (see tracker:dev:2611-001).
+- `doc/FEATURE-qrcode.md` documents the variant and its reasoning.
+Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=none reason=Design settled with the user (2026-11-24); it replaces the default written in the entry body. status=Design chosen, code not read yet, nothing implemented.
+Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=turn 39  ctx 104k  floor 51k (turn 1)  cumulated 2.8M tok  est. $1.85  model claude-opus-5-5 reason=Implementation done in the working tree, waiting for the full suite run and the user's commit. status=Implemented, uncommitted; feature tests green, full models suite not run yet, live scan not done.
