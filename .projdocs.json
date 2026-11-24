@@ -1,0 +1,6 @@
+{
+  "default_tracker": "dev",
+  "trackers": {
+    "dev": "DEVSTATE.md"
+  }
+}

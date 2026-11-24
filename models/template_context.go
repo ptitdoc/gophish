@@ -2,11 +2,48 @@ package models
 
 import (
 	"bytes"
+	"encoding/base64"
+	"fmt"
 	"net/mail"
 	"net/url"
 	"path"
 	"text/template"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
+
+// QR code image settings for the qrcode template function. Reasoning: fixed
+// constants until a template actually needs another size.
+const (
+	qrCodeSize          = 256
+	qrCodeRecoveryLevel = qrcode.Medium
+)
+
+// templateFuncs are the functions every phishing template can call, on top
+// of Go's built-ins. Typical use, a QR code of the recipient URL embedded as
+// a data URI: <img src="data:image/png;base64,{{.URL | qrcode | base64}}">
+// (tracker:dev:2611-002).
+var templateFuncs = template.FuncMap{
+	"qrcode": templateQRCode,
+	"base64": templateBase64,
+}
+
+// templateQRCode returns the PNG image of a QR code that encodes content.
+func templateQRCode(content string) ([]byte, error) {
+	return qrcode.Encode(content, qrCodeRecoveryLevel, qrCodeSize)
+}
+
+// templateBase64 encodes bytes (the qrcode output) or a string in standard
+// base64 with padding.
+func templateBase64(v interface{}) (string, error) {
+	switch d := v.(type) {
+	case []byte:
+		return base64.StdEncoding.EncodeToString(d), nil
+	case string:
+		return base64.StdEncoding.EncodeToString([]byte(d)), nil
+	}
+	return "", fmt.Errorf("base64: unsupported type %T", v)
+}
 
 // TemplateContext is an interface that allows both campaigns and email
 // requests to have a PhishingTemplateContext generated for them.
@@ -76,7 +113,7 @@ func NewPhishingTemplateContext(ctx TemplateContext, r BaseRecipient, rid string
 // template body and data.
 func ExecuteTemplate(text string, data interface{}) (string, error) {
 	buff := bytes.Buffer{}
-	tmpl, err := template.New("template").Parse(text)
+	tmpl, err := template.New("template").Funcs(templateFuncs).Parse(text)
 	if err != nil {
 		return buff.String(), err
 	}

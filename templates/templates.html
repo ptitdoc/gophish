@@ -77,6 +77,15 @@
                         <textarea id="html_editor"></textarea>
                     </div>
                 </div>
+                <!-- Template variable help (tracker:dev:2611-002). Braces are HTML
+                     entities: this page is itself rendered by html/template. -->
+                <div class="help-block">
+                    Template variables:<br>
+                    <code>&#123;&#123;.URL&#125;&#125;</code> recipient link<br>
+                    <code>&#123;&#123;.URL | urlquery&#125;&#125;</code> link encoded as a URL parameter (external QR code service)<br>
+                    <code>&#123;&#123;.URL | qrcode | base64&#125;&#125;</code> QR code of the link, PNG in base64<br>
+                    <code>&lt;img src="data:image/png;base64,&#123;&#123;.URL | qrcode | base64&#125;&#125;"&gt;</code> QR code embedded in the mail
+                </div>
                 <div class="checkbox checkbox-primary">
                     <input id="use_tracker_checkbox" type="checkbox" checked>
                     <label for="use_tracker_checkbox">Add Tracking Image</label>
