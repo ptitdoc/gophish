@@ -34,6 +34,7 @@ Acceptance criteria:
 - `go test ./models/` green, `TestNewTemplateContext` included.
 - With `recipient_parameter` set to another name, a test mail carries `?<name>=` and a click on it is recorded.
 Handover: 2026-11-25 agent=main session model=claude-opus-5-5 cost=none reason=Implementation done in the working tree, waiting for the user's commit and live test. status=Implemented, uncommitted; models suite at known failures only; live test not done.
+Handover: 2026-11-25 agent=main session model=claude-opus-5-5 cost=none reason=User committed be6e9bb; the CLAUDE.md patch-series table was removed at the user's request, which voids the previous Next. status=Committed (be6e9bb); live test pending.
 
 ## DONE (commit:68c6ef6) [H] -- tracker:dev:2611-002 -- 2026-11-24 -- QR code template functions qrcode and base64
 Context: assessments need a QR code in phishing mails that carries the recipient URL. A remote QR service works today (`<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={{.URL | urlquery}}">`, checked 2026-11-24), but it sends every recipient token to a third party and is a remote image that clients block or proxy.
@@ -75,3 +76,23 @@ Acceptance criteria (draft, to confirm when planning):
 Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=none reason=Design settled with the user (2026-11-24); it replaces the default written in the entry body. status=Design chosen, code not read yet, nothing implemented.
 Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=turn 39  ctx 104k  floor 51k (turn 1)  cumulated 2.8M tok  est. $1.85  model claude-opus-5-5 reason=Implementation done in the working tree, waiting for the full suite run and the user's commit. status=Implemented, uncommitted; feature tests green, full models suite not run yet, live scan not done.
 Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=none reason=User committed 98d6a2c; entry stays NEXT until the live scan check passes. status=Committed (98d6a2c); live scan check pending.
+
+## DONE (commit:f804db4) [] -- tracker:dev:2611-004 -- 2026-11-25 -- Hide banners: X-Server and X-Mailer headers
+Patch of the series, landed before this tracker existed (2023-01-02). Comments out the `X-Server` header on the phishing server (`controllers/phish.go`) and the `X-Mailer` header on sent and test mails (`models/maillog.go`, `models/email_request.go`). Known consequence: `TestEmailRequestGenerate` still expects `X-Mailer: gophish` and fails.
+
+## DONE (commit:65a47a5) [] -- tracker:dev:2611-005 -- 2026-11-25 -- Neutral test email subject and body
+Patch of the series, landed before this tracker existed (2024-10-11). Replaces the default test mail subject and body with neutral text (`controllers/api/util.go`).
+
+## DONE (commit:daa71e3) [] -- tracker:dev:2611-006 -- 2026-11-25 -- Recipient URL parameter renamed from rid to token
+Patch of the series, landed before this tracker existed (2024-10-11). Renames the recipient URL parameter from `rid` to `token` (`models/campaign.go`, `RecipientParameter`). Made configurable later by tracker:dev:2611-001.
+
+## DONE (commit:5d45e96) [] -- tracker:dev:2611-007 -- 2026-11-25 -- Local gomail copy with XOAUTH2 support
+Patch of the series, landed before this tracker existed (2025-01-14). `go.mod` replaces `github.com/gophish/gomail` with the local path `/srv/gophish/gomail/`, a gomail copy with XOAUTH2 support; removes the gomail lines from `go.sum`. The path became `../gomail` in 68c6ef6 (tracker:dev:2611-002).
+
+## DONE (commit:1cc1c3f) [] -- tracker:dev:2611-008 -- 2026-11-25 -- Custom email send rate (throttling)
+Two patches of the series, landed before this tracker existed (2025-01-14):
+- 5cebc48: send-rate selector (`#select_send_rate`) and custom-rate modal (`#selectCustomRateModal`) in the campaign form (`templates/campaigns.html`).
+- 1cc1c3f: JS for the selector (`static/js/src/app/campaigns.js`): computes the upstream "send emails by" date from the rate and the group sizes, or the rate from that date.
+
+## DONE (commit:2aff248) [] -- tracker:dev:2611-009 -- 2026-11-25 -- SMTP client announces localhost in EHLO
+Patch of the series, landed before this tracker existed (2025-01-14). The SMTP client announces `localhost` in EHLO instead of the machine hostname (`models/smtp.go`).
