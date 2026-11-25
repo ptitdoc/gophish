@@ -127,7 +127,9 @@ var ErrSMTPNotFound = errors.New("Sending profile not found")
 var ErrInvalidSendByDate = errors.New("The launch date must be before the \"send emails by\" date")
 
 // RecipientParameter is the URL parameter that points to the result ID for a recipient.
-const RecipientParameter = "token"
+// Setup replaces the default with `recipient_parameter` from config.json when it is set,
+// so each assessment picks its own name without a rebuild.
+var RecipientParameter = "token"
 
 // Validate checks to make sure there are no invalid fields in a submitted campaign
 func (c *Campaign) Validate() error {

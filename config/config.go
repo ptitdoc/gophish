@@ -37,6 +37,9 @@ type Config struct {
 	TestFlag       bool        `json:"test_flag"`
 	ContactAddress string      `json:"contact_address"`
 	Logging        *log.Config `json:"logging"`
+	// RecipientParameter names the URL parameter that carries the recipient
+	// id. Empty keeps the default of models.RecipientParameter.
+	RecipientParameter string `json:"recipient_parameter"`
 }
 
 // Version contains the current gophish version

@@ -15,7 +15,7 @@ Development work on the gophish fork: new patches of the series (fingerprint rem
 
 ## Log
 
-## NEXT () [] -- tracker:dev:2611-001 -- 2026-11-24 -- Recipient parameter name set in config.json; fix TestNewTemplateContext
+## NEXT () [H] -- tracker:dev:2611-001 -- 2026-11-24 -- Recipient parameter name set in config.json; fix TestNewTemplateContext
 Context: daa71e3 "change rid to token" hard-codes the recipient URL parameter as `token` in `models/campaign.go` (`RecipientParameter`). `models/template_context_test.go` (`TestNewTemplateContext`) still expects `?rid=` in `URL` and `TrackingURL`, so it most likely fails since daa71e3 (read, not run, 2026-11-24).
 
 Goal: the parameter name comes from the configuration, so each assessment picks its own name without a rebuild.
@@ -33,6 +33,7 @@ Defaults if nobody decides:
 Acceptance criteria:
 - `go test ./models/` green, `TestNewTemplateContext` included.
 - With `recipient_parameter` set to another name, a test mail carries `?<name>=` and a click on it is recorded.
+Handover: 2026-11-25 agent=main session model=claude-opus-5-5 cost=none reason=Implementation done in the working tree, waiting for the user's commit and live test. status=Implemented, uncommitted; models suite at known failures only; live test not done.
 
 ## DONE (commit:68c6ef6) [H] -- tracker:dev:2611-002 -- 2026-11-24 -- QR code template functions qrcode and base64
 Context: assessments need a QR code in phishing mails that carries the recipient URL. A remote QR service works today (`<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={{.URL | urlquery}}">`, checked 2026-11-24), but it sends every recipient token to a third party and is a remote image that clients block or proxy.
@@ -73,3 +74,4 @@ Acceptance criteria (draft, to confirm when planning):
 - `doc/FEATURE-qrcode.md` documents the variant and its reasoning.
 Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=none reason=Design settled with the user (2026-11-24); it replaces the default written in the entry body. status=Design chosen, code not read yet, nothing implemented.
 Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=turn 39  ctx 104k  floor 51k (turn 1)  cumulated 2.8M tok  est. $1.85  model claude-opus-5-5 reason=Implementation done in the working tree, waiting for the full suite run and the user's commit. status=Implemented, uncommitted; feature tests green, full models suite not run yet, live scan not done.
+Handover: 2026-11-24 agent=main session model=claude-opus-5-5 cost=none reason=User committed 98d6a2c; entry stays NEXT until the live scan check passes. status=Committed (98d6a2c); live scan check pending.

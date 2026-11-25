@@ -44,10 +44,10 @@ func (s *ModelsSuite) TestNewTemplateContext(c *check.C) {
 		FromAddress: "From Address <from@example.com>",
 	}
 	expected := PhishingTemplateContext{
-		URL:           fmt.Sprintf("%s?rid=%s", ctx.URL, r.RId),
+		URL:           fmt.Sprintf("%s?%s=%s", ctx.URL, RecipientParameter, r.RId),
 		BaseURL:       ctx.URL,
 		BaseRecipient: r.BaseRecipient,
-		TrackingURL:   fmt.Sprintf("%s/track?rid=%s", ctx.URL, r.RId),
+		TrackingURL:   fmt.Sprintf("%s/track?%s=%s", ctx.URL, RecipientParameter, r.RId),
 		From:          "From Address",
 		RId:           r.RId,
 	}
@@ -55,6 +55,23 @@ func (s *ModelsSuite) TestNewTemplateContext(c *check.C) {
 	got, err := NewPhishingTemplateContext(ctx, r.BaseRecipient, r.RId)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(got, check.DeepEquals, expected)
+}
+
+// A recipient parameter name set in config.json ends up in the phishing and
+// tracking URLs of the mail (tracker:dev:2611-001). The test sets the package
+// variable the way Setup does, then puts the default back.
+func (s *ModelsSuite) TestFeat_2611_001_ConfiguredRecipientParameterInURLs(c *check.C) {
+	defer func() { RecipientParameter = "token" }()
+	RecipientParameter = "id"
+	ctx := mockTemplateContext{
+		URL:         "http://example.com",
+		FromAddress: "From Address <from@example.com>",
+	}
+	r := BaseRecipient{FirstName: "Foo", LastName: "Bar", Email: "foo@bar.com"}
+	got, err := NewPhishingTemplateContext(ctx, r, "1234567")
+	c.Assert(err, check.Equals, nil)
+	c.Assert(got.URL, check.Equals, "http://example.com?id=1234567")
+	c.Assert(got.TrackingURL, check.Equals, "http://example.com/track?id=1234567")
 }
 
 // qrTemplateContext returns a phishing context for one recipient, used by

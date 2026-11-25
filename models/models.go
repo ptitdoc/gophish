@@ -133,6 +133,10 @@ func createTemporaryPassword(u *User) error {
 func Setup(c *config.Config) error {
 	// Setup the package-scoped config
 	conf = c
+	// An absent key keeps the default, so an existing config.json works unchanged.
+	if conf.RecipientParameter != "" {
+		RecipientParameter = conf.RecipientParameter
+	}
 	// Setup the goose configuration
 	migrateConf := &goose.DBConf{
 		MigrationsDir: conf.MigrationsPath,
